@@ -140,19 +140,31 @@ struct PulsePillTab: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 6) {
-                Image(systemName: tab.glyph)
-                Text(tab.label)
+            Group {
+                if active {
+                    HStack(spacing: 5) {
+                        Image(systemName: tab.glyph)
+                        Text(tab.label)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
+                    }
+                    .font(.caption.weight(.semibold))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(PulseTheme.orchid.opacity(0.35))
+                    .clipShape(Capsule())
+                    .overlay(Capsule().stroke(PulseTheme.orchid))
+                } else {
+                    Image(systemName: tab.glyph)
+                        .font(.body.weight(.semibold))
+                        .padding(.vertical, 10)
+                }
             }
-            .font(.caption.weight(.semibold))
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(active ? PulseTheme.orchid.opacity(0.35) : Color.clear)
+            .frame(maxWidth: .infinity)
             .foregroundStyle(active ? PulseTheme.mint : PulseTheme.muted)
-            .clipShape(Capsule())
-            .overlay(Capsule().stroke(active ? PulseTheme.orchid : PulseTheme.border))
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(tab.label)
     }
 }
 

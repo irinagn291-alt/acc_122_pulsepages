@@ -1,6 +1,7 @@
 import SwiftUI
 import UIKit
 import VisionKit
+import AVFoundation
 
 enum ISBNNormalizer {
     static func digits(from raw: String) -> String? {
@@ -15,20 +16,30 @@ enum ISBNNormalizer {
 struct ISBNPulseScanner: View {
     @Binding var isPresented: Bool
     var onDigits: (String) -> Void
+    @State private var gate: LensPermissionGuard.Gate = .checking
 
     var body: some View {
         Group {
-            if DataScannerViewController.isSupported, DataScannerViewController.isAvailable {
+            switch gate {
+            case .checking:
+                PulseSpinner("Opening lens…")
+            case .ready:
                 PulseScannerBridge(onDigits: { digits in
                     isPresented = false
                     onDigits(digits)
                 })
                 .ignoresSafeArea()
-            } else {
+            case .denied:
+                ContentUnavailableView(
+                    "Camera access needed",
+                    systemImage: "camera.fill",
+                    description: Text("Allow camera access in Settings to scan ISBN barcodes.")
+                )
+            case .unsupported:
                 ContentUnavailableView(
                     "ISBN Scanner",
                     systemImage: "barcode.viewfinder",
-                    description: Text("Live ISBN scanning needs a camera-equipped device.")
+                    description: Text("ISBN scanning requires a supported iPhone with a working camera.")
                 )
             }
         }
@@ -39,6 +50,7 @@ struct ISBNPulseScanner: View {
                 Button("Cancel") { isPresented = false }
             }
         }
+        .task { gate = await LensPermissionGuard.resolveGate() }
     }
 }
 
@@ -80,7 +92,7 @@ private struct PulseScannerBridge: UIViewControllerRepresentable {
         override func viewDidLoad() {
             super.viewDidLoad()
             view.backgroundColor = UIColor(red: 0.102, green: 0.063, blue: 0.157, alpha: 1)
-            guard DataScannerViewController.isSupported, DataScannerViewController.isAvailable else { return }
+            guard LensPermissionGuard.scannerSupported else { return }
             let types: Set<DataScannerViewController.RecognizedDataType> = [
                 .barcode(symbologies: [.ean13, .ean8, .code128]),
             ]
@@ -98,8 +110,12 @@ private struct PulseScannerBridge: UIViewControllerRepresentable {
 
         override func viewDidAppear(_ animated: Bool) {
             super.viewDidAppear(animated)
-            guard let scanner else { return }
-            try? scanner.startScanning()
+            guard let scanner, AVCaptureDevice.authorizationStatus(for: .video) == .authorized else { return }
+            do {
+                try scanner.startScanning()
+            } catch {
+                return
+            }
             stream?.cancel()
             stream = Task { @MainActor [weak self] in
                 guard let self, let scanner = self.scanner else { return }

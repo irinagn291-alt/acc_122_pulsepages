@@ -73,33 +73,42 @@ struct PulseHubShell: View {
     }
 
     private var bottomBar: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 0) {
             PulsePillTab(tab: .feed, active: activeTab == .feed) {
                 activeTab = .feed
                 navPath = NavigationPath()
             }
-            Spacer(minLength: 0)
+            .frame(maxWidth: .infinity)
+
             PulseScanFAB {
                 guard !container.reachability.isOffline else { return }
                 showScanner = true
             }
             .opacity(container.reachability.isOffline ? 0.4 : 1)
-            Spacer(minLength: 0)
+            .padding(.horizontal, 4)
+
             PulsePillTab(tab: .stack, active: activeTab == .stack) {
                 activeTab = .stack
                 navPath = NavigationPath()
             }
+            .frame(maxWidth: .infinity)
+
             PulsePillTab(tab: .creators, active: activeTab == .creators) {
                 activeTab = .creators
                 navPath = NavigationPath()
             }
+            .frame(maxWidth: .infinity)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(
+        .padding(.top, 10)
+        .padding(.bottom, 6)
+        .frame(maxWidth: .infinity)
+        .background {
             PulseTheme.surface
-                .overlay(Rectangle().fill(PulseTheme.border).frame(height: 1), alignment: .top)
-        )
+                .overlay(alignment: .top) {
+                    Rectangle().fill(PulseTheme.border).frame(height: 1)
+                }
+                .ignoresSafeArea(edges: .bottom)
+        }
     }
 
     @MainActor
